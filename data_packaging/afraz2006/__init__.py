@@ -1,18 +1,18 @@
 import logging
+import shutil
+import sys
+from pathlib import Path
 from typing import List
 
 import math
-import shutil
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from PIL import Image
+from brainscore_core.supported_data_standards.brainio.assemblies import DataAssembly
+from brainscore_core.supported_data_standards.brainio.packaging import package_stimulus_set
+from brainscore_core.supported_data_standards.brainio.stimuli import StimulusSet
 from numpy.random.mtrand import RandomState
 from tqdm import tqdm
-
-from brainio.assemblies import DataAssembly
-from brainio.stimuli import StimulusSet
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +200,8 @@ def sample_faces(num_images):
     for directory in directories:
         if len(set(paths)) == num_images:
             break
+        if directory.is_file():
+            continue
         directory_paths = list((source_face_directory / directory).iterdir())
         paths += [source_face_directory / directory / filename for filename in random_state.choice(
             # since some directories have only one image, we need to allow replacement
@@ -273,4 +275,12 @@ def collect_assembly():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
     train_stimulus_set, test_stimulus_set = train_test_stimuli()
+
+    for stimuli in [test_stimulus_set, train_stimulus_set]:
+        init_data = package_stimulus_set(catalog_name=None, proto_stimulus_set=stimuli,
+                                         stimulus_set_identifier=stimuli.identifier,
+                                         bucket_name="brainscore-storage")
+        print(f"{stimuli.name} stimulus_set\n{init_data}")
